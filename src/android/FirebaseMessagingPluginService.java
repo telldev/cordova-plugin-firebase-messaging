@@ -2,7 +2,9 @@ package by.chemerisuk.cordova.firebase;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -12,12 +14,16 @@ import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
+import org.json.JSONObject;
+
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+
+import hu.tell.pager.MainActivity;
 
 import static android.content.ContentResolver.SCHEME_ANDROID_RESOURCE;
 
@@ -81,12 +87,35 @@ public class FirebaseMessagingPluginService extends FirebaseMessagingService {
         intent.putExtra(EXTRA_FCM_MESSAGE, remoteMessage);
         broadcastManager.sendBroadcast(intent);
 
+        Log.i(TAG, "onMessageReceived:getData: " + new JSONObject(remoteMessage.getData()).toString());
+
         if (FirebaseMessagingPlugin.isForceShow()) {
             RemoteMessage.Notification notification = remoteMessage.getNotification();
             if (notification != null) {
                 showAlert(notification);
             }
         }
+
+        if(!FirebaseMessagingPlugin.isInForeground()) {
+            showNotification(remoteMessage.getData().get("title"), remoteMessage.getData().get("body"));
+        }
+    }
+
+    private void showNotification(String title, String body) {
+        final Intent intent = new Intent(this, MainActivity.class);
+        intent.setAction(Long.toString(System.currentTimeMillis()));
+        final PendingIntent contentIntent =
+                PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, defaultNotificationChannel)
+                .setSmallIcon(defaultNotificationIcon)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setContentIntent(contentIntent)
+                .setAutoCancel(true);
+
+        notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
     }
 
     private void showAlert(RemoteMessage.Notification notification) {

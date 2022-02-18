@@ -19,6 +19,10 @@ import com.google.firebase.messaging.RemoteMessage;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
+
+import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaWebView;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,6 +39,7 @@ import static androidx.core.content.ContextCompat.getSystemService;
 
 public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
     private static final String TAG = "FCMPlugin";
+    private static boolean isForeground = false;
 
     private JSONObject lastBundle;
     private boolean isBackground = false;
@@ -45,6 +50,12 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
     private static FirebaseMessagingPlugin instance;
     private NotificationManager notificationManager;
     private FirebaseMessaging firebaseMessaging;
+
+    @Override
+    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+      super.initialize(cordova, webView);
+      isForeground = true;
+    }
 
     @Override
     protected void pluginInitialize() {
@@ -258,11 +269,23 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
     @Override
     public void onPause(boolean multitasking) {
         this.isBackground = true;
+        isForeground = false;
     }
 
     @Override
     public void onResume(boolean multitasking) {
         this.isBackground = false;
+        isForeground = true;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        isForeground = false;
+    }
+
+    public static boolean isInForeground() {
+        return isForeground;
     }
 
     static void sendNotification(RemoteMessage remoteMessage) {
